@@ -1,0 +1,57 @@
+{
+  "version": "0.0.0",
+  "configurations": [
+
+    // ─── SERVER-SIDE (Node) ────────────────────────────────────────────────
+    {
+      "name": "Next.js: server",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/next",
+      "args": ["dev"],
+      "cwd": "${workspaceFolder}",
+      "env": { "NODE_OPTIONS": "--inspect" },
+      "serverReadyAction": {
+        "pattern": "started server on .+, url: (https?://.+)",
+        "uriFormat": "%s",
+        "action": "debugWithChrome"
+      },
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+
+    // ─── CLIENT-SIDE (Chrome) ─────────────────────────────────────────────
+    {
+      "name": "Next.js: client",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3200",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "webpack://_N_E/*": "${workspaceFolder}/*"
+      }
+    },
+
+    // ─── CLIENT (TW locale) ──────────────────────────────────────────────
+    {
+      "name": "Next.js: client /tw",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3200/tw",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "webpack://_N_E/*": "${workspaceFolder}/*"
+      }
+    }
+  ],
+
+  "compounds": [
+    {
+      "name": "Next.js: server + client",
+      "configurations": ["Next.js: server", "Next.js: client"],
+      "stopAll": true
+    }
+  ]
+}
