@@ -499,6 +499,10 @@ function Create({ initial, ui } = {}) {
                 🎲
               </button>
             </div>
+            <hr style={{ margin: "20px 20px" }} />
+             <h5 className="sub" style={{ margin: "10px 2px 0" }}>
+              ❤️ Shared between both of you.
+             </h5>
             <p className="sub" style={{ margin: "10px 2px 0", fontSize: 13.5 }}>
               These ride along inside the link, so {to.trim() || "they"} open it in
               one tap — no typing. We&apos;ll show the words to you both, a little
@@ -603,13 +607,14 @@ function ShareLink({ url, title, sub, who, phrase, sendVerb, sticker, stickerPre
         </button>
       </div>
 
+      <div className="hr-or"><span>Note</span></div>
+
       {phrase && (
         <div className="note">
           <span className="ic">🔑</span>
           <span>
-            Your secret words are <strong>“{phrase.trim()}”</strong>. They&apos;re
-            tucked inside the link, so {who || "they"} just tap to open — no need
-            to send them separately. Keep them somewhere in case you forget 💛
+            Your secret words are <strong>“{phrase.trim()}”</strong>.
+            Keep them somewhere in case you forget 💛
           </span>
         </div>
       )}
@@ -626,7 +631,7 @@ function ShareLink({ url, title, sub, who, phrase, sendVerb, sticker, stickerPre
 
       {waitRoom && (
         <>
-          <div className="hr-or"><span>or</span></div>
+          <div className="hr-or"><span>Now We Wait</span></div>
           <button className="btn btn-soft btn-sm" onClick={goWait}>
             Wait for {who || "their"} answer here →
           </button>
