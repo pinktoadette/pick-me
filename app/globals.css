@@ -445,6 +445,34 @@ input::placeholder { color: #c7b6b6; }
   opacity: 0.9;
 }
 
+/* Language switcher */
+.lang-switch {
+  display: flex;
+  gap: 6px;
+  margin-top: 22px;
+  background: var(--paper);
+  padding: 5px;
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+}
+.lang-btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.lang-btn:hover { color: var(--ink); }
+.lang-btn.on {
+  background: var(--coral);
+  color: var(--white);
+}
+
 /* Reveal panel */
 .reveal {
   text-align: center;

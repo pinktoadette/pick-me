@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { seal, unseal } from "@/lib/crypto";
 import {
   randomPhrase,
@@ -12,6 +12,7 @@ import {
   decodePhrase,
 } from "@/lib/util";
 import { putReply, getReply } from "@/lib/room";
+import { LANGS, detectLang, localeFor, getStrings } from "@/lib/i18n";
 import Link from "next/link";
 
 // A card back emoji per position, just for a little variety.
@@ -60,12 +61,45 @@ function resetHome() {
   window.location.href = window.location.pathname;
 }
 
+/* ------------------------------------------------------------------ */
+/* Language context                                                    */
+/* ------------------------------------------------------------------ */
+
+const LangCtx = createContext({
+  lang: "en",
+  t: getStrings("en"),
+  locale: "en-US",
+  setLang: () => {},
+});
+function useT() {
+  return useContext(LangCtx);
+}
+
 export default function Page() {
   const [phase, setPhase] = useState("boot");
-  const [link, setLink] = useState(null); // { kind: 'd' | 'r', token }
+  const [link, setLink] = useState(null); // { kind, token, phrase }
+  const [lang, setLangState] = useState("en");
 
-  // Read the URL fragment once on mount (client only).
+  function setLang(code, persist = true) {
+    setLangState(code);
+    if (persist) {
+      try {
+        localStorage.setItem("pmlang", code);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  // Read the URL fragment + language once on mount (client only).
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem("pmlang");
+      setLangState(stored || detectLang());
+    } catch {
+      setLangState(detectLang());
+    }
+
     const hash = window.location.hash.replace(/^#/, "");
     // Links may carry the secret phrase after a "~" so they open in one tap:
     //   #d.<token>~<encodedPhrase>
@@ -87,6 +121,8 @@ export default function Page() {
     }
   }, []);
 
+  const ctx = { lang, t: getStrings(lang), locale: localeFor(lang), setLang };
+
   if (phase === "boot") {
     return (
       <div className="stage">
@@ -98,39 +134,54 @@ export default function Page() {
   }
 
   return (
-    <div className="stage">
-      <Link
-        href="/"
-        className="logo"
-        aria-label="Pick Me — start over"
-        onClick={(e) => {
-          e.preventDefault();
-          resetHome();
-        }}
-      >
-        <header className="brandbar">Pick Me 💌</header>
-      </Link>
-      <div className="sheet-wrap">
-        <Stickers />
-        <div className="sheet">
-          {phase === "home" && <Home onCreate={() => setPhase("create")} />}
-          {phase === "create" && <Create />}
-          {phase === "open" && <Opener link={link} />}
-          {phase === "wait" && <Waiting room={link.token} />}
-        </div>
-      </div>
-      <footer className="credit">
-        Sticker art by{" "}
-        <a
-          href="https://www.flaticon.com/free-stickers/cute"
-          title="cute stickers"
-          target="_blank"
-          rel="noopener noreferrer"
+    <LangCtx.Provider value={ctx}>
+      <div className="stage">
+        <Link
+          href="/"
+          className="logo"
+          aria-label="Pick Me — start over"
+          onClick={(e) => {
+            e.preventDefault();
+            resetHome();
+          }}
         >
-          barnstudio · Flaticon
-        </a>
-      </footer>
-    </div>
+          <header className="brandbar">Pick Me 💌</header>
+        </Link>
+        <div className="sheet-wrap">
+          <Stickers />
+          <div className="sheet">
+            {phase === "home" && <Home onCreate={() => setPhase("create")} />}
+            {phase === "create" && <Create />}
+            {phase === "open" && <Opener link={link} />}
+            {phase === "wait" && <Waiting room={link.token} />}
+          </div>
+        </div>
+
+        <div className="lang-switch">
+          {LANGS.map((l) => (
+            <button
+              key={l.code}
+              className={`lang-btn ${lang === l.code ? "on" : ""}`}
+              onClick={() => setLang(l.code)}
+            >
+              {l.label}
+            </button>
+          ))}
+        </div>
+
+        <footer className="credit">
+          Sticker art by{" "}
+          <a
+            href="https://www.flaticon.com/free-stickers/cute"
+            title="cute stickers"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            barnstudio · Flaticon
+          </a>
+        </footer>
+      </div>
+    </LangCtx.Provider>
   );
 }
 
@@ -215,6 +266,7 @@ function Stickers() {
 /* ------------------------------------------------------------------ */
 
 function Home({ onCreate }) {
+  const { t } = useT();
   return (
     <div className="center">
       <img
@@ -224,15 +276,14 @@ function Home({ onCreate }) {
         width="132"
         height="132"
       />
-      <h1>Pick a card, any card 😊</h1>
+      <h1>{t.home_h1}</h1>
       <p className="sub" style={{ margin: "40px 0px", fontSize: 13.5 }}>
-        Set up a few hidden cards for someone. They tap one, and chance picks
-        the plan — just a little fun.
+        {t.home_sub}
       </p>
       <button className="btn btn-primary" onClick={onCreate} style={{ marginTop: 50, marginBottom: 50 }}>
-        Make a deck
+        {t.home_make}
       </button>
-      <div className="brandmark">let chance decide</div>
+      <div className="brandmark">{t.home_brandmark}</div>
     </div>
   );
 }
@@ -241,23 +292,8 @@ function Home({ onCreate }) {
 /* Create (sender setup)                                               */
 /* ------------------------------------------------------------------ */
 
-const EXAMPLES = ["Coffee ☕", "A walk 🌳", "Movie 🎬", "Ice cream 🍦", "Lunch 🥗", "Bookshop 📚"];
-
-const NOTE_IDEAS = [
-  "I want to ask you something…",
-  "Pick a card, any card 😊",
-  "No pressure — just for fun",
-  "Been meaning to ask…",
-];
-
-const STEP_META = [
-  { title: "Who's it for?", sub: "Just so they know it's from you." },
-  { title: "The cards", sub: "A few things you'd be happy to do." },
-  { title: "Little details", sub: "All optional — skip anything you like." },
-  { title: "Your secret words", sub: "A sweet little phrase you'll both share." },
-];
-
 function Create({ initial, ui } = {}) {
+  const { t, lang } = useT();
   const [from, setFrom] = useState(initial?.from || "");
   const [to, setTo] = useState(initial?.to || "");
   const [note, setNote] = useState("");
@@ -272,11 +308,11 @@ function Create({ initial, ui } = {}) {
   const [busy, setBusy] = useState(false);
 
   const copy = {
-    eyebrow: ui?.eyebrow || "New deck",
-    heading: ui?.heading || "Set it up",
-    sub: ui?.sub || "Only you see this part. They just get to tap a card.",
-    doneTitle: ui?.doneTitle || "Your deck is ready 🎉",
-    sendVerb: ui?.sendVerb || "Send the deck",
+    eyebrow: ui?.eyebrow || t.eyebrow_new,
+    heading: ui?.heading || t.heading_set,
+    sub: ui?.sub || t.sub_set,
+    doneTitle: ui?.doneTitle || t.doneTitle,
+    sendVerb: ui?.sendVerb || t.send_deck,
   };
 
   const filledCards = cards.map((c) => c.trim()).filter(Boolean);
@@ -309,6 +345,7 @@ function Create({ initial, ui } = {}) {
         where: where.trim(),
         sticker,
         room,
+        lang, // so the receiver opens in the same language
       };
       const token = await seal(payload, phrase);
       const url = `${window.location.origin}${window.location.pathname}#d.${token}~${encodePhrase(phrase)}`;
@@ -346,7 +383,7 @@ function Create({ initial, ui } = {}) {
       <ShareLink
         url={built}
         title={copy.doneTitle}
-        sub={`Send this link to ${to.trim() || "them"}.`}
+        sub={t.send_this_link(to.trim())}
         who={to.trim()}
         phrase={
           phrase.trim() === (initial?.phrase || "").trim() && initial?.phrase
@@ -366,15 +403,15 @@ function Create({ initial, ui } = {}) {
       : step === 1
         ? filledCards.length >= 2
         : true;
-  const createLabel = copy.sendVerb === "Send the deck" ? "Create link" : "Make my deck";
-  const meta = STEP_META[step];
+  const createLabel = copy.sendVerb === t.send_deck ? t.create_link : t.make_my_deck;
+  const meta = t.steps[step];
 
   return (
     <div>
       <div className="wizard-head">
         <p className="eyebrow">{copy.eyebrow}</p>
         <div className="dots">
-          {STEP_META.map((_, i) => (
+          {t.steps.map((_, i) => (
             <span
               key={i}
               className={`dot ${i === step ? "on" : ""} ${i < step ? "done" : ""}`}
@@ -389,36 +426,36 @@ function Create({ initial, ui } = {}) {
       {step === 0 && (
         <div className="wizard-step">
           <div className="block">
-            <label className="field">Your name</label>
+            <label className="field">{t.f_yourName}</label>
             <input
               type="text"
               value={from}
               autoFocus
-              placeholder="e.g. Sam"
+              placeholder={t.ph_egSam}
               onChange={(e) => setFrom(e.target.value)}
             />
           </div>
           <div className="block">
-            <label className="field">Their name</label>
+            <label className="field">{t.f_theirName}</label>
             <input
               type="text"
               value={to}
-              placeholder="e.g. Jordan"
+              placeholder={t.ph_egJordan}
               onChange={(e) => setTo(e.target.value)}
             />
           </div>
           <div className="block">
             <label className="field">
-              A little note <span className="opt">optional</span>
+              {t.f_note} <span className="opt">{t.optional}</span>
             </label>
             <input
               type="text"
               value={note}
-              placeholder="say something to set the mood…"
+              placeholder={t.ph_note}
               onChange={(e) => setNote(e.target.value)}
             />
             <div className="chips">
-              {NOTE_IDEAS.map((n) => (
+              {t.noteIdeas.map((n) => (
                 <button className="chip" key={n} onClick={() => setNote(n)}>
                   {n}
                 </button>
@@ -437,7 +474,7 @@ function Create({ initial, ui } = {}) {
               <input
                 type="text"
                 value={c}
-                placeholder="something to do together"
+                placeholder={t.ph_card}
                 onChange={(e) => setCard(i, e.target.value)}
               />
               {cards.length > 2 && (
@@ -452,13 +489,13 @@ function Create({ initial, ui } = {}) {
             </div>
           ))}
           <div className="chips">
-            {EXAMPLES.map((ex) => (
+            {t.examples.map((ex) => (
               <button className="chip" key={ex} onClick={() => addExampleToFirstEmpty(ex)}>
                 {ex}
               </button>
             ))}
             <button className="chip" onClick={() => setCards((cs) => [...cs, ""])}>
-              + card
+              {t.add_card}
             </button>
           </div>
         </div>
@@ -468,7 +505,7 @@ function Create({ initial, ui } = {}) {
       {step === 2 && (
         <div className="wizard-step">
           <div className="block">
-            <label className="field">When <span className="opt">optional</span></label>
+            <label className="field">{t.f_when} <span className="opt">{t.optional}</span></label>
             <input
               type="datetime-local"
               style={{
@@ -485,18 +522,18 @@ function Create({ initial, ui } = {}) {
             />
           </div>
           <div className="block">
-            <label className="field">Where <span className="opt">optional</span></label>
+            <label className="field">{t.f_where} <span className="opt">{t.optional}</span></label>
             <input
               type="text"
               value={where}
               style={{ width: "100%" }}
-              placeholder="a place, or leave it open"
+              placeholder={t.ph_where}
               onChange={(e) => setWhere(e.target.value)}
             />
           </div>
           <div className="block">
             <label className="field">
-              A sticker for their “yes” <span className="opt">optional</span>
+              {t.f_sticker} <span className="opt">{t.optional}</span>
             </label>
             <div className="sticker-grid">
               {STICKERS.map((s) => (
@@ -511,7 +548,7 @@ function Create({ initial, ui } = {}) {
               ))}
             </div>
             <p className="sub" style={{ margin: "8px 2px 0", fontSize: 13.5 }}>
-              They&apos;ll see it the moment they tap “Works for me.”
+              {t.sticker_hint}
             </p>
           </div>
         </div>
@@ -521,13 +558,13 @@ function Create({ initial, ui } = {}) {
       {step === 3 && (
         <div className="wizard-step">
           <div className="block">
-            <label className="field">Secret words</label>
+            <label className="field">{t.f_secret}</label>
             <div className="row">
               <input
                 type="text"
                 value={phrase}
                 autoFocus
-                placeholder="a sweet little phrase 💛"
+                placeholder={t.ph_secret}
                 onChange={(e) => setPhrase(e.target.value)}
               />
               <button className="chip" onClick={() => setPhrase(randomPhrase())}>
@@ -536,12 +573,10 @@ function Create({ initial, ui } = {}) {
             </div>
             <hr style={{ margin: "20px 20px" }} />
             <h5 className="sub" style={{ margin: "10px 2px 0" }}>
-              ❤️ Shared between both of you.
+              {t.secret_shared}
             </h5>
             <p className="sub" style={{ margin: "10px 2px 0", fontSize: 13.5 }}>
-              These ride along inside the link, so {to.trim() || "they"} open it in
-              one tap — no typing. We&apos;ll show the words to you both, a little
-              secret to share 💛
+              {t.secret_note(to.trim())}
             </p>
           </div>
         </div>
@@ -550,7 +585,7 @@ function Create({ initial, ui } = {}) {
       <div className="wizard-nav">
         {step > 0 ? (
           <button className="btn btn-ghost" onClick={() => setStep((s) => s - 1)}>
-            ← Back
+            {t.nav_back}
           </button>
         ) : (
           <span />
@@ -561,7 +596,7 @@ function Create({ initial, ui } = {}) {
             disabled={!canNext}
             onClick={() => setStep((s) => s + 1)}
           >
-            Next →
+            {t.nav_next}
           </button>
         ) : (
           <button
@@ -569,7 +604,7 @@ function Create({ initial, ui } = {}) {
             disabled={!ready || busy}
             onClick={build}
           >
-            {busy ? "Shuffling…" : createLabel}
+            {busy ? t.shuffling : createLabel}
           </button>
         )}
       </div>
@@ -582,6 +617,7 @@ function Create({ initial, ui } = {}) {
 /* ------------------------------------------------------------------ */
 
 function ShareLink({ url, title, sub, who, phrase, sendVerb, sticker, stickerPreview, waitRoom }) {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   const inputRef = useRef(null);
 
@@ -613,6 +649,8 @@ function ShareLink({ url, title, sub, who, phrase, sendVerb, sticker, stickerPre
     copy();
   }
 
+  const secretNote = phrase ? t.share_secret_note(phrase.trim()) : null;
+
   return (
     <div className="center">
       {sticker ? (
@@ -635,23 +673,24 @@ function ShareLink({ url, title, sub, who, phrase, sendVerb, sticker, stickerPre
 
       <div className="stack">
         <button className="btn btn-primary" onClick={share}>
-          {sendVerb || "Share link"}
+          {sendVerb || t.share_share}
         </button>
         <button className="btn btn-soft btn-sm" onClick={copy}>
-          {copied ? "Copied ✓" : "Copy link"}
+          {copied ? t.share_copied : t.share_copy}
         </button>
       </div>
 
       {(phrase || stickerPreview) && (
-        <div className="hr-or"><span>Note</span></div>
+        <div className="hr-or"><span>{t.div_note}</span></div>
       )}
 
-      {phrase && (
+      {secretNote && (
         <div className="note">
           <span className="ic">🔑</span>
           <span className="note-ic">
-            Your secret words are <strong>“{phrase.trim()}”</strong>.
-            Keep them somewhere in case you forget 💛
+            {secretNote.pre}
+            <strong>{secretNote.strong}</strong>
+            {secretNote.post}
           </span>
         </div>
       )}
@@ -659,22 +698,18 @@ function ShareLink({ url, title, sub, who, phrase, sendVerb, sticker, stickerPre
       {stickerPreview && (
         <div className="sticker-preview">
           <img src={stickerSrc(stickerPreview)} alt="" width="52" height="52" />
-          <span>
-            {who || "They"}&apos;ll get this little surprise the moment they say
-            yes 💛
-          </span>
+          <span>{t.share_sticker_preview(who)}</span>
         </div>
       )}
 
       {waitRoom && (
         <>
-          <div className="hr-or"><span>Now We Wait</span></div>
+          <div className="hr-or"><span>{t.div_now_wait}</span></div>
           <button className="btn btn-soft btn-sm" onClick={goWait}>
-            Wait for {who || "their"} answer here →
+            {t.share_wait_here(who)}
           </button>
           <p className="sub" style={{ margin: "8px 2px 0", fontSize: 13 }}>
-            Keep this page and it&apos;ll update on its own when {who || "they"}{" "}
-            answer — no need for them to send anything back.
+            {t.share_wait_sub(who)}
           </p>
         </>
       )}
@@ -687,6 +722,7 @@ function ShareLink({ url, title, sub, who, phrase, sendVerb, sticker, stickerPre
 /* ------------------------------------------------------------------ */
 
 function Opener({ link }) {
+  const { t, setLang } = useT();
   const storeKey = useMemo(() => tokenKey(link.token), [link.token]);
   const [phrase, setPhrase] = useState("");
   const [data, setData] = useState(null);
@@ -703,6 +739,12 @@ function Opener({ link }) {
     }
   }
 
+  function onOpened(d) {
+    // Match the sender's language for the whole exchange (not persisted).
+    if (d.lang) setLang(d.lang, false);
+    setData(d);
+  }
+
   // Auto-unlock: prefer the phrase riding in the link, then a remembered one.
   useEffect(() => {
     const candidate = link.phrase || safeRead(storeKey)?.phrase;
@@ -711,7 +753,7 @@ function Opener({ link }) {
       .then((d) => {
         remember(candidate);
         setUsedPhrase(candidate);
-        setData({ ...d, _saved: safeRead(storeKey) });
+        onOpened({ ...d, _saved: safeRead(storeKey) });
       })
       .catch(() => { });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -726,9 +768,9 @@ function Opener({ link }) {
       const d = await unseal(link.token, phrase);
       remember(phrase);
       setUsedPhrase(phrase);
-      setData({ ...d, _saved: safeRead(storeKey) });
+      onOpened({ ...d, _saved: safeRead(storeKey) });
     } catch {
-      setError("Hmm, that phrase didn't work. Give it another try?");
+      setError(t.op_wrong);
     } finally {
       setBusy(false);
     }
@@ -738,26 +780,26 @@ function Opener({ link }) {
     if (data.t === "deck")
       return <DeckGame data={data} storeKey={storeKey} phrase={usedPhrase} />;
     if (data.t === "reply") return <Outcome data={data} />;
-    return <p className="error">This link looks a bit scrambled.</p>;
+    return <p className="error">{t.op_scrambled}</p>;
   }
 
-  const opening = link.kind === "r" ? "See their answer" : "Open the deck";
+  const opening = link.kind === "r" ? t.op_seeAnswer : t.op_openDeck;
   return (
     <form className="center" onSubmit={tryOpen}>
       <div style={{ fontSize: 46, marginBottom: 4 }}>🔒</div>
       <h1>{opening}</h1>
-      <p className="sub">Type the phrase you were given to open it.</p>
+      <p className="sub">{t.op_typePhrase}</p>
       <div className="block">
         <input
           type="text"
           autoFocus
           value={phrase}
-          placeholder="the magic word"
+          placeholder={t.ph_magicWord}
           onChange={(e) => setPhrase(e.target.value)}
         />
       </div>
       <button className="btn btn-primary" type="submit" disabled={busy}>
-        {busy ? "Opening…" : "Unlock"}
+        {busy ? t.op_opening : t.op_unlock}
       </button>
       {error && <p className="error">{error}</p>}
     </form>
@@ -785,6 +827,7 @@ function saveProgress(key, patch) {
 /* ------------------------------------------------------------------ */
 
 function DeckGame({ data, storeKey, phrase }) {
+  const { t } = useT();
   const saved = data._saved || {};
   const [picked, setPicked] = useState(
     typeof saved.picked === "number" ? saved.picked : null
@@ -829,11 +872,11 @@ function DeckGame({ data, storeKey, phrase }) {
       <Create
         initial={{ from: data.to || "", to: data.from || "", phrase: mostRecentPhrase() }}
         ui={{
-          eyebrow: "Your turn",
-          heading: "Your cards",
-          sub: `Set up your own little deck to send back to ${data.from || "them"}.`,
-          doneTitle: "Your deck is ready 🎉",
-          sendVerb: "Send it back",
+          eyebrow: t.counter_eyebrow,
+          heading: t.counter_heading,
+          sub: t.counter_sub(data.from),
+          doneTitle: t.doneTitle,
+          sendVerb: t.send_it_back,
         }}
       />
     );
@@ -842,11 +885,11 @@ function DeckGame({ data, storeKey, phrase }) {
   return (
     <div>
       <div className="center">
-        <p className="eyebrow">{data.from ? `From ${data.from}` : "A little game"}</p>
+        <p className="eyebrow">{data.from ? t.deck_from(data.from) : t.deck_game}</p>
         {step === "pick" && data.note ? (
           <p className="intro">{data.note}</p>
         ) : null}
-        <h1>{step === "pick" ? "Tap a card" : "Nice pick!"}</h1>
+        <h1>{step === "pick" ? t.deck_tap : t.deck_nice}</h1>
       </div>
 
       <div className="deck">
@@ -873,7 +916,7 @@ function DeckGame({ data, storeKey, phrase }) {
         })}
       </div>
 
-      {step === "pick" && <p className="hint">Any card — don&apos;t overthink it 🙂</p>}
+      {step === "pick" && <p className="hint">{t.deck_dont_overthink}</p>}
 
       {step === "respond" && (
         <Respond
@@ -890,7 +933,7 @@ function DeckGame({ data, storeKey, phrase }) {
 
       {step === "pick" && phrase && (
         <p className="secret-words">
-          🔑 your secret words: <strong>{phrase}</strong>
+          🔑 {t.deck_secret} <strong>{phrase}</strong>
         </p>
       )}
     </div>
@@ -902,6 +945,7 @@ function DeckGame({ data, storeKey, phrase }) {
 /* ------------------------------------------------------------------ */
 
 function Respond({ data, activity, onDecide }) {
+  const { t, locale } = useT();
   const [mode, setMode] = useState("main"); // 'main' | 'propose'
   const slots = useMemo(() => alternativeSlots(data.when), [data.when]);
 
@@ -909,7 +953,7 @@ function Respond({ data, activity, onDecide }) {
     return (
       <div style={{ marginTop: 18 }}>
         <p className="hint" style={{ marginBottom: 12 }}>
-          Pick a time that works better 👇
+          {t.rp_pickBetter}
         </p>
         <div className="stack">
           {slots.map((s) => (
@@ -918,14 +962,14 @@ function Respond({ data, activity, onDecide }) {
               className="slot"
               onClick={() => onDecide("propose", s.value)}
             >
-              <div className="slot-when">{formatWhen(s.value)}</div>
-              <div className="slot-label">{s.label}</div>
+              <div className="slot-when">{formatWhen(s.value, locale)}</div>
+              <div className="slot-label">{t[s.key]}</div>
             </button>
           ))}
         </div>
         <div className="spacer" />
         <button className="btn btn-ghost" onClick={() => setMode("main")}>
-          ← back
+          {t.rp_back}
         </button>
       </div>
     );
@@ -935,18 +979,18 @@ function Respond({ data, activity, onDecide }) {
     <div style={{ marginTop: 18 }}>
       <div className="reveal">
         <div className="pill-row">
-          {data.when && <span className="when">{formatWhen(data.when)}</span>}
+          {data.when && <span className="when">{formatWhen(data.when, locale)}</span>}
           {data.where && <span className="where">📍 {data.where}</span>}
         </div>
       </div>
       <div className="spacer" />
       <div className="stack">
         <button className="btn btn-primary" onClick={() => onDecide("confirm")}>
-          {data.when ? "Works for me 👍" : "Sounds good 👍"}
+          {data.when ? t.rp_works : t.rp_sounds}
         </button>
         {data.when && (
           <button className="btn btn-soft btn-sm" onClick={() => setMode("propose")}>
-            Another time?
+            {t.rp_another}
           </button>
         )}
       </div>
@@ -955,7 +999,7 @@ function Respond({ data, activity, onDecide }) {
         onClick={() => onDecide("return")}
         style={{ marginTop: 8 }}
       >
-        Send my own cards back ↩
+        {t.rp_sendOwn}
       </button>
     </div>
   );
@@ -966,6 +1010,7 @@ function Respond({ data, activity, onDecide }) {
 /* ------------------------------------------------------------------ */
 
 function ReplyReady({ data, response, proposed, activity }) {
+  const { t } = useT();
   const [url, setUrl] = useState(null);
 
   useEffect(() => {
@@ -979,6 +1024,7 @@ function ReplyReady({ data, response, proposed, activity }) {
       when: response === "propose" ? proposed : data.when,
       where: data.where || "",
       sticker: data.sticker || "",
+      lang: data.lang || "", // carry the deck's language onto the reply
     };
     // Reuse the same phrase the picker just used (kept in localStorage), so the
     // sender can open the reply with the same word — no new secret to share.
@@ -997,23 +1043,23 @@ function ReplyReady({ data, response, proposed, activity }) {
 
   const headline =
     response === "confirm"
-      ? "You're in! 🎉"
+      ? t.rr_confirmHead
       : response === "propose"
-        ? "Nice — suggest that time 🕘"
-        : "Sent back to reshuffle ↩";
+        ? t.rr_proposeHead
+        : t.rr_returnHead;
 
   const sub =
     response === "confirm"
-      ? `Send this back so ${data.from || "they"} know${data.from ? "s" : ""} it's on.`
+      ? t.rr_confirmSub(data.from)
       : response === "propose"
-        ? `Send this back with your suggested time.`
-        : `No worries. Send it back and let ${data.from || "them"} take another turn.`;
+        ? t.rr_proposeSub
+        : t.rr_returnSub(data.from);
 
   if (!url) {
     return (
       <div className="center">
         <div style={{ fontSize: 40 }}>💫</div>
-        <p className="sub">Getting your reply ready…</p>
+        <p className="sub">{t.rr_getting}</p>
       </div>
     );
   }
@@ -1024,7 +1070,7 @@ function ReplyReady({ data, response, proposed, activity }) {
       title={headline}
       sub={sub}
       who={data.from}
-      sendVerb="Send it back"
+      sendVerb={t.send_it_back}
       sticker={response === "confirm" ? data.sticker : ""}
     />
   );
@@ -1052,6 +1098,7 @@ function mostRecentPhrase() {
 /* ------------------------------------------------------------------ */
 
 function Outcome({ data }) {
+  const { t, locale } = useT();
   const who = data.from || "They";
   if (data.kind === "confirm") {
     return (
@@ -1061,16 +1108,16 @@ function Outcome({ data }) {
         ) : (
           <div className="big-emoji">🎉</div>
         )}
-        <h1>{who} is in!</h1>
-        <p className="sub">You&apos;re set for:</p>
+        <h1>{t.oc_isIn(who)}</h1>
+        <p className="sub">{t.oc_setFor}</p>
         <div className="activity">{data.card}</div>
         <div className="pill-row">
-          {data.when && <span className="when">{formatWhen(data.when)}</span>}
+          {data.when && <span className="when">{formatWhen(data.when, locale)}</span>}
           {data.where && <span className="where">📍 {data.where}</span>}
         </div>
         <div className="note" style={{ marginTop: 22, textAlign: "left" }}>
           <span className="ic">💬</span>
-          <span>Drop {who} a message to say you&apos;re looking forward to it.</span>
+          <span>{t.oc_dropMsg(who)}</span>
         </div>
       </div>
     );
@@ -1079,15 +1126,15 @@ function Outcome({ data }) {
     return (
       <div className="center reveal">
         <div className="big-emoji">🕘</div>
-        <h1>{who} suggested a time</h1>
-        <p className="sub">For {data.card || "the plan"}:</p>
+        <h1>{t.oc_suggested(who)}</h1>
+        <p className="sub">{t.oc_forPlan(data.card)}</p>
         <div className="pill-row">
-          {data.when && <span className="when">{formatWhen(data.when)}</span>}
+          {data.when && <span className="when">{formatWhen(data.when, locale)}</span>}
           {data.where && <span className="where">📍 {data.where}</span>}
         </div>
         <div className="note" style={{ marginTop: 22, textAlign: "left" }}>
           <span className="ic">👍</span>
-          <span>If that works, just text {who} back to lock it in.</span>
+          <span>{t.oc_ifWorks(who)}</span>
         </div>
       </div>
     );
@@ -1096,11 +1143,8 @@ function Outcome({ data }) {
   return (
     <div className="center reveal">
       <div className="big-emoji">🔄</div>
-      <h1>{who} sent the deck back</h1>
-      <p className="sub">
-        No stress — the timing might just not have fit. Want to reshuffle and try
-        a fresh set of cards?
-      </p>
+      <h1>{t.oc_sentBack(who)}</h1>
+      <p className="sub">{t.oc_noStress}</p>
       <button
         className="btn btn-primary"
         onClick={() => {
@@ -1108,7 +1152,7 @@ function Outcome({ data }) {
           window.location.reload();
         }}
       >
-        Make a new deck
+        {t.oc_makeNew}
       </button>
     </div>
   );
@@ -1120,10 +1164,11 @@ function Outcome({ data }) {
 
 // Collapsible "what did I actually send?" recap for peace of mind.
 function SentRecap({ deck, to }) {
+  const { t, locale } = useT();
   if (!deck) return null;
   return (
     <details className="recap">
-      <summary>🃏 What did I send {to || "them"}?</summary>
+      <summary>{t.wt_recapSummary(to)}</summary>
       <div className="recap-body">
         {deck.note && <p className="intro">{deck.note}</p>}
         <div className="recap-cards">
@@ -1135,14 +1180,14 @@ function SentRecap({ deck, to }) {
         </div>
         {(deck.when || deck.where) && (
           <div className="pill-row">
-            {deck.when && <span className="when">{formatWhen(deck.when)}</span>}
+            {deck.when && <span className="when">{formatWhen(deck.when, locale)}</span>}
             {deck.where && <span className="where">📍 {deck.where}</span>}
           </div>
         )}
         {deck.sticker && (
           <div className="recap-sticker">
             <img src={stickerSrc(deck.sticker)} width="44" height="44" alt="" />
-            <span>their “yes” sticker</span>
+            <span>{t.wt_theirYes}</span>
           </div>
         )}
       </div>
@@ -1152,6 +1197,7 @@ function SentRecap({ deck, to }) {
 
 // Compact "here's the link again" block for the waiting screen.
 function ResendLink({ url, who }) {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   const inputRef = useRef(null);
   if (!url) return null;
@@ -1180,19 +1226,19 @@ function ResendLink({ url, who }) {
 
   return (
     <div style={{ marginTop: 22, width: "100%" }}>
-      <div className="hr-or"><span>the link</span></div>
+      <div className="hr-or"><span>{t.div_theLink}</span></div>
       <p className="sub" style={{ fontSize: 13.5, marginBottom: 10 }}>
-        Didn&apos;t send it yet? Here&apos;s {who ? `${who}'s` : "the"} deck link.
+        {t.wt_didntSend(who)}
       </p>
       <div className="linkbox">
         <input ref={inputRef} readOnly value={url} onFocus={(e) => e.target.select()} />
       </div>
       <div className="stack">
         <button className="btn btn-primary btn-sm" onClick={share}>
-          Send the deck
+          {t.send_deck}
         </button>
         <button className="btn btn-soft btn-sm" onClick={copy}>
-          {copied ? "Copied ✓" : "Copy link"}
+          {copied ? t.share_copied : t.share_copy}
         </button>
       </div>
     </div>
@@ -1200,6 +1246,7 @@ function ResendLink({ url, who }) {
 }
 
 function Waiting({ room }) {
+  const { t, locale } = useT();
   const record = useMemo(() => safeRead(`pmroom:${room}`), [room]);
   const [phrase, setPhrase] = useState(record?.phrase || "");
   const [data, setData] = useState(null); // decrypted reply
@@ -1247,7 +1294,7 @@ function Waiting({ room }) {
   if (!phrase) {
     return (
       <PhraseGate
-        title="See their answer"
+        title={t.op_seeAnswer}
         onPhrase={(p) => setPhrase(p)}
         // We can't verify until a reply exists; accept and start polling.
         verify={async () => true}
@@ -1259,12 +1306,8 @@ function Waiting({ room }) {
     return (
       <div className="center">
         <div className="big-emoji">📬</div>
-        <h1>Waiting for {who}</h1>
-        <p className="sub">
-          Live updates aren&apos;t switched on for this deck. As soon as {who} taps
-          their answer, they&apos;ll get a little link to send back to you — open
-          it and you&apos;ll see the result here.
-        </p>
+        <h1>{t.wt_waitingForPlain(who)}</h1>
+        <p className="sub">{t.wt_disabled(who)}</p>
         <SentRecap deck={record?.deck} to={who} />
         <ResendLink url={record?.deckUrl} who={who} />
         <WaitingFooter hasLocal={!!record?.deckUrl} phrase={phrase} />
@@ -1275,19 +1318,18 @@ function Waiting({ room }) {
   return (
     <div className="center">
       <div className="big-emoji waiting-pulse">💌</div>
-      <h1>Waiting for {who}…</h1>
-      <p className="sub">
-        This page checks on its own — leave it open, or come back to this link
-        anytime. You&apos;ll see their answer here the moment it lands.
-      </p>
+      <h1>{t.wt_waitingFor(who)}</h1>
+      <p className="sub">{t.wt_waitingSub}</p>
       <p className="sub" style={{ fontSize: 13, opacity: 0.8 }}>
         {checkedAt
-          ? `Last checked ${checkedAt.toLocaleTimeString(undefined, {
-            hour: "numeric",
-            minute: "2-digit",
-            second: "2-digit",
-          })}`
-          : "Checking…"}
+          ? t.wt_lastChecked(
+              checkedAt.toLocaleTimeString(locale, {
+                hour: "numeric",
+                minute: "2-digit",
+                second: "2-digit",
+              })
+            )
+          : t.wt_checking}
       </p>
       <SentRecap deck={record?.deck} to={who} />
       <ResendLink url={record?.deckUrl} who={who} />
@@ -1298,19 +1340,19 @@ function Waiting({ room }) {
 
 // Device note (+ secret words) and start-over at the bottom of the waiting screen.
 function WaitingFooter({ hasLocal, phrase }) {
+  const { t } = useT();
   return (
     <>
       {hasLocal && (
         <div className="device-note">
           <p className="sub" style={{ margin: 0, fontSize: 12.5 }}>
-            💡 The link &amp; recap live on this device. Checking from a different
-            phone or browser? You&apos;ll need your secret words to open it there:
+            {t.wt_deviceNote}
           </p>
           {phrase && <p className="secret-words">🔑 {phrase}</p>}
         </div>
       )}
       <button className="btn btn-ghost btn-sm" onClick={resetHome}>
-        Start over
+        {t.wt_startOver}
       </button>
     </>
   );
@@ -1318,6 +1360,7 @@ function WaitingFooter({ hasLocal, phrase }) {
 
 // Small reusable phrase prompt.
 function PhraseGate({ title, onPhrase, verify }) {
+  const { t } = useT();
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1330,25 +1373,25 @@ function PhraseGate({ title, onPhrase, verify }) {
     const ok = await verify(value);
     setBusy(false);
     if (ok) onPhrase(value);
-    else setError("Hmm, that phrase didn't work. Give it another try?");
+    else setError(t.op_wrong);
   }
 
   return (
     <form className="center" onSubmit={submit}>
       <div style={{ fontSize: 46, marginBottom: 4 }}>🔒</div>
       <h1>{title}</h1>
-      <p className="sub">Type the phrase you set for this deck.</p>
+      <p className="sub">{t.op_typePhrase}</p>
       <div className="block">
         <input
           type="text"
           autoFocus
           value={value}
-          placeholder="the magic word"
+          placeholder={t.ph_magicWord}
           onChange={(e) => setValue(e.target.value)}
         />
       </div>
       <button className="btn btn-primary" type="submit" disabled={busy}>
-        {busy ? "Opening…" : "Unlock"}
+        {busy ? t.op_opening : t.op_unlock}
       </button>
       {error && <p className="error">{error}</p>}
     </form>
