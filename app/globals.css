@@ -381,6 +381,19 @@ input::placeholder { color: #c7b6b6; }
   margin: 18px 0 2px;
 }
 
+.secret-words {
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin: 16px auto 0;
+  background: var(--mint);
+  border-radius: 999px;
+  padding: 8px 16px;
+  width: fit-content;
+  max-width: 100%;
+}
+.secret-words strong { color: var(--ink); }
+
 /* Reveal panel */
 .reveal {
   text-align: center;

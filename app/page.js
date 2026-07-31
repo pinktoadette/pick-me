@@ -607,7 +607,9 @@ function ShareLink({ url, title, sub, who, phrase, sendVerb, sticker, stickerPre
         </button>
       </div>
 
-      <div className="hr-or"><span>Note</span></div>
+      {(phrase || stickerPreview) && (
+        <div className="hr-or"><span>Note</span></div>
+      )}
 
       {phrase && (
         <div className="note">
@@ -837,7 +839,7 @@ function DeckGame({ data, storeKey, phrase }) {
         })}
       </div>
 
-      {step === "pick" && <p className="hint">Any one — don&apos;t overthink it 🙂</p>}
+      {step === "pick" && <p className="hint">Any card — don&apos;t overthink it 🙂</p>}
 
       {step === "respond" && (
         <Respond
