@@ -5,7 +5,7 @@ export const metadata = {
   title: "Pick Me 💌",
   description:
     "Set up a few hidden cards for someone, they tap one, and chance picks the plan.",
-  keywords: ["pick a card", "chance", "game", "dating", "introverts", "shy", "fun", "playful", "flirty", "romantic", "ask a girl out", "ask a guy out", "pick a plan", "pick a date", "pick a time", "pick a place"],
+  keywords: ["pick a card", "chance", "game", "dating", "introverts", "shy", "social anxiety", "fun", "playful", "flirty", "romantic", "ask a girl out", "ask a guy out", "pick a plan", "pick a date", "pick a time", "pick a place"],
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
