@@ -5,6 +5,12 @@ export const metadata = {
   title: "Pick Me 💌",
   description:
     "Set up a few hidden cards for someone, they tap one, and chance picks the plan.",
+  keywords: ["pick a card", "chance", "game", "dating", "introverts", "shy", "fun", "playful", "flirty", "romantic", "ask a girl out", "ask a guy out", "pick a plan", "pick a date", "pick a time", "pick a place"],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Pick Me",
+  },
   icons: {
     icon: [
       {
@@ -15,14 +21,14 @@ export const metadata = {
   openGraph: {
     title: "Pick Me 💌",
     description:
-      "A little no-pressure game — tap a card and let chance pick the plan.",
+      "Pick a card, any card — tap a card and let chance pick the plan.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Pick Me 💌",
     description:
-      "A little no-pressure game — tap a card and let chance pick the plan.",
+      "Pick a card, any card — tap a card and let chance pick the plan.",
   },
 };
 
