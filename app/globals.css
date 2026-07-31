@@ -216,7 +216,7 @@ input::placeholder { color: #c7b6b6; }
 }
 .row input { flex: 1; }
 
-.block { margin-bottom: 20px; }
+.block { margin-bottom: 20px; min-width: 0; }
 
 /* Buttons */
 .btn {
@@ -648,6 +648,8 @@ input::placeholder { color: #c7b6b6; }
   color: var(--ink-soft);
   text-align: center;
   opacity: 0.85;
+  position: fixed;
+  bottom: 50px;
 }
 .credit a { color: var(--coral); font-weight: 700; text-decoration: none; }
 .credit a:hover { text-decoration: underline; }

@@ -471,7 +471,15 @@ function Create({ initial, ui } = {}) {
             <label className="field">When <span className="opt">optional</span></label>
             <input
               type="datetime-local"
-              style={{ width: "100%", textAlign: "left", boxSizing: "border-box" }}
+              style={{
+                width: "100%",
+                maxWidth: "100%",
+                minWidth: 0,
+                boxSizing: "border-box",
+                WebkitAppearance: "none",
+                appearance: "none",
+                textAlign: "left",
+              }}
               value={when}
               onChange={(e) => setWhen(e.target.value)}
             />
