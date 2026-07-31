@@ -471,6 +471,7 @@ function Create({ initial, ui } = {}) {
             <label className="field">When <span className="opt">optional</span></label>
             <input
               type="datetime-local"
+              style={{ width: "100%" }}
               value={when}
               onChange={(e) => setWhen(e.target.value)}
             />
@@ -480,6 +481,7 @@ function Create({ initial, ui } = {}) {
             <input
               type="text"
               value={where}
+              style={{ width: "100%" }}
               placeholder="a place, or leave it open"
               onChange={(e) => setWhere(e.target.value)}
             />
