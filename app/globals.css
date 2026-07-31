@@ -677,7 +677,8 @@ input::placeholder { color: #c7b6b6; }
   text-align: center;
   opacity: 0.85;
   position: fixed;
-  bottom: 50px;
+  bottom: 0px;
+  padding: 50px 0;
 }
 .credit a { color: var(--coral); font-weight: 700; text-decoration: none; }
 .credit a:hover { text-decoration: underline; }
