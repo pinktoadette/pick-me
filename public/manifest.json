@@ -1,0 +1,9 @@
+{
+  "name": "Pick Me",
+  "short_name": "Pick Me",
+  "description": "Set up a few hidden cards for someone, they tap one, and chance picks the plan.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4c2c2",
+  "theme_color": "#f4c2c2"
+}

@@ -30,6 +30,7 @@ export const metadata = {
     description:
       "Pick a card, any card — tap a card and let chance pick the plan.",
   },
+  manifest: "/manifest.json",
 };
 
 export const viewport = {
