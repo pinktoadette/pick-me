@@ -225,11 +225,11 @@ function Home({ onCreate }) {
         height="132"
       />
       <h1>Pick a card, any card 😊</h1>
-      <p className="sub">
+      <p className="sub" style={{ margin: "40px 0px", fontSize: 13.5 }}>
         Set up a few hidden cards for someone. They tap one, and chance picks
         the plan — just a little fun.
       </p>
-      <button className="btn btn-primary" onClick={onCreate}>
+      <button className="btn btn-primary" onClick={onCreate} style={{ marginTop: 50, marginBottom: 50 }}>
         Make a deck
       </button>
       <div className="brandmark">let chance decide</div>
