@@ -124,16 +124,16 @@ a{
 }
 
 /* Kawaii stickers floating around the card */
-.stickers { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.stickers { position: absolute; inset: 0; pointer-events: none; }
 .sticker {
   position: absolute;
   filter: drop-shadow(0 6px 10px rgba(232, 129, 129, 0.22));
   animation: bob 5s ease-in-out infinite;
 }
-.sticker.s1 { top: -34px; left: -30px; animation-delay: 0s; }
+.sticker.s1 { top: -34px; left: -30px; animation-delay: 0s; z-index: 100; }
 .sticker.s2 { top: -30px; right: -26px; animation-delay: 0.6s; }
-.sticker.s3 { bottom: -34px; right: -28px; animation-delay: 1.1s; }
-.sticker.s4 { bottom: -26px; left: -24px; animation-delay: 1.6s; }
+.sticker.s3 { bottom: -34px; right: -28px; animation-delay: 1.1s; z-index: 100; }
+.sticker.s4 { bottom: -20px; left: -24px; animation-delay: 1.6s; }
 .sticker.s5 { top: 40%; left: -30px; animation-delay: 0.9s; }
 .sticker.s6 { top: 34%; right: -26px; animation-delay: 0.3s; }
 
