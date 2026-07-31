@@ -55,6 +55,11 @@ function stickerSrc(file) {
   return `/stickers/${encodeURIComponent(file)}`;
 }
 
+// Hard reset back to a clean home screen (drops the #hash and reloads).
+function resetHome() {
+  window.location.href = window.location.pathname;
+}
+
 export default function Page() {
   const [phase, setPhase] = useState("boot");
   const [link, setLink] = useState(null); // { kind: 'd' | 'r', token }
@@ -94,9 +99,17 @@ export default function Page() {
 
   return (
     <div className="stage">
-      <Link href="/" className="logo" aria-label="Pick Me">
-      <header className="brandbar">Pick Me 💌</header>
-    </Link>
+      <Link
+        href="/"
+        className="logo"
+        aria-label="Pick Me — start over"
+        onClick={(e) => {
+          e.preventDefault();
+          resetHome();
+        }}
+      >
+        <header className="brandbar">Pick Me 💌</header>
+      </Link>
       <div className="sheet-wrap">
         <Stickers />
         <div className="sheet">
@@ -304,7 +317,19 @@ function Create({ initial, ui } = {}) {
       try {
         localStorage.setItem(
           `pmroom:${room}`,
-          JSON.stringify({ phrase, from: from.trim(), to: to.trim() })
+          JSON.stringify({
+            phrase,
+            from: from.trim(),
+            to: to.trim(),
+            deckUrl: url,
+            deck: {
+              cards: filledCards,
+              note: note.trim(),
+              when,
+              where: where.trim(),
+              sticker,
+            },
+          })
         );
       } catch {
         /* ignore storage errors */
@@ -614,7 +639,7 @@ function ShareLink({ url, title, sub, who, phrase, sendVerb, sticker, stickerPre
       {phrase && (
         <div className="note">
           <span className="ic">🔑</span>
-          <span>
+          <span className="note-ic">
             Your secret words are <strong>“{phrase.trim()}”</strong>.
             Keep them somewhere in case you forget 💛
           </span>
@@ -1084,6 +1109,87 @@ function Outcome({ data }) {
 /* Waiting — the sender's page that auto-refreshes for the answer      */
 /* ------------------------------------------------------------------ */
 
+// Collapsible "what did I actually send?" recap for peace of mind.
+function SentRecap({ deck, to }) {
+  if (!deck) return null;
+  return (
+    <details className="recap">
+      <summary>🃏 What did I send {to || "them"}?</summary>
+      <div className="recap-body">
+        {deck.note && <p className="intro">{deck.note}</p>}
+        <div className="recap-cards">
+          {deck.cards.map((c, i) => (
+            <span className="recap-card" key={i}>
+              {c}
+            </span>
+          ))}
+        </div>
+        {(deck.when || deck.where) && (
+          <div className="pill-row">
+            {deck.when && <span className="when">{formatWhen(deck.when)}</span>}
+            {deck.where && <span className="where">📍 {deck.where}</span>}
+          </div>
+        )}
+        {deck.sticker && (
+          <div className="recap-sticker">
+            <img src={stickerSrc(deck.sticker)} width="44" height="44" alt="" />
+            <span>their “yes” sticker</span>
+          </div>
+        )}
+      </div>
+    </details>
+  );
+}
+
+// Compact "here's the link again" block for the waiting screen.
+function ResendLink({ url, who }) {
+  const [copied, setCopied] = useState(false);
+  const inputRef = useRef(null);
+  if (!url) return null;
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      inputRef.current?.select();
+      document.execCommand("copy");
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  }
+  async function share() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ url });
+        return;
+      } catch {
+        /* fall through */
+      }
+    }
+    copy();
+  }
+
+  return (
+    <div style={{ marginTop: 22, width: "100%" }}>
+      <div className="hr-or"><span>the link</span></div>
+      <p className="sub" style={{ fontSize: 13.5, marginBottom: 10 }}>
+        Didn&apos;t send it yet? Here&apos;s {who ? `${who}'s` : "the"} deck link.
+      </p>
+      <div className="linkbox">
+        <input ref={inputRef} readOnly value={url} onFocus={(e) => e.target.select()} />
+      </div>
+      <div className="stack">
+        <button className="btn btn-primary btn-sm" onClick={share}>
+          Send the deck
+        </button>
+        <button className="btn btn-soft btn-sm" onClick={copy}>
+          {copied ? "Copied ✓" : "Copy link"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Waiting({ room }) {
   const record = useMemo(() => safeRead(`pmroom:${room}`), [room]);
   const [phrase, setPhrase] = useState(record?.phrase || "");
@@ -1150,6 +1256,9 @@ function Waiting({ room }) {
           their answer, they&apos;ll get a little link to send back to you — open
           it and you&apos;ll see the result here.
         </p>
+        <SentRecap deck={record?.deck} to={who} />
+        <ResendLink url={record?.deckUrl} who={who} />
+        <WaitingFooter hasLocal={!!record?.deckUrl} phrase={phrase} />
       </div>
     );
   }
@@ -1171,7 +1280,30 @@ function Waiting({ room }) {
             })}`
           : "Checking…"}
       </p>
+      <SentRecap deck={record?.deck} to={who} />
+      <ResendLink url={record?.deckUrl} who={who} />
+      <WaitingFooter hasLocal={!!record?.deckUrl} phrase={phrase} />
     </div>
+  );
+}
+
+// Device note (+ secret words) and start-over at the bottom of the waiting screen.
+function WaitingFooter({ hasLocal, phrase }) {
+  return (
+    <>
+      {hasLocal && (
+        <div className="device-note">
+          <p className="sub" style={{ margin: 0, fontSize: 12.5 }}>
+            💡 The link &amp; recap live on this device. Checking from a different
+            phone or browser? You&apos;ll need your secret words to open it there:
+          </p>
+          {phrase && <p className="secret-words">🔑 {phrase}</p>}
+        </div>
+      )}
+      <button className="btn btn-ghost btn-sm" onClick={resetHome}>
+        Start over
+      </button>
+    </>
   );
 }
 
