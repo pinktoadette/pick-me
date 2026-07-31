@@ -482,6 +482,7 @@ input::placeholder { color: #c7b6b6; }
   font-size: 14px;
   font-weight: 600;
   color: var(--ink);
+  width: 100%;
 }
 .linkbox input:focus { box-shadow: none; }
 .note {
