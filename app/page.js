@@ -364,8 +364,8 @@ function Create({ initial, ui } = {}) {
     step === 0
       ? !!from.trim() && !!to.trim()
       : step === 1
-      ? filledCards.length >= 2
-      : true;
+        ? filledCards.length >= 2
+        : true;
   const createLabel = copy.sendVerb === "Send the deck" ? "Create link" : "Make my deck";
   const meta = STEP_META[step];
 
@@ -471,7 +471,7 @@ function Create({ initial, ui } = {}) {
             <label className="field">When <span className="opt">optional</span></label>
             <input
               type="datetime-local"
-              style={{ width: "100%" }}
+              style={{ width: "100%", textAlign: "left", boxSizing: "border-box" }}
               value={when}
               onChange={(e) => setWhen(e.target.value)}
             />
@@ -527,9 +527,9 @@ function Create({ initial, ui } = {}) {
               </button>
             </div>
             <hr style={{ margin: "20px 20px" }} />
-             <h5 className="sub" style={{ margin: "10px 2px 0" }}>
+            <h5 className="sub" style={{ margin: "10px 2px 0" }}>
               ❤️ Shared between both of you.
-             </h5>
+            </h5>
             <p className="sub" style={{ margin: "10px 2px 0", fontSize: 13.5 }}>
               These ride along inside the link, so {to.trim() || "they"} open it in
               one tap — no typing. We&apos;ll show the words to you both, a little
@@ -705,7 +705,7 @@ function Opener({ link }) {
         setUsedPhrase(candidate);
         setData({ ...d, _saved: safeRead(storeKey) });
       })
-      .catch(() => {});
+      .catch(() => { });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeKey, link.token, link.phrase]);
 
@@ -787,10 +787,10 @@ function DeckGame({ data, storeKey, phrase }) {
   const initialStep = saved.response === "return"
     ? "counter"
     : saved.response
-    ? "done"
-    : picked !== null
-    ? "respond"
-    : "pick";
+      ? "done"
+      : picked !== null
+        ? "respond"
+        : "pick";
   const [step, setStep] = useState(initialStep);
 
   function pick(i) {
@@ -848,9 +848,8 @@ function DeckGame({ data, storeKey, phrase }) {
           return (
             <button
               key={i}
-              className={`flip ${data.cards.length > 3 ? "small" : ""} ${
-                isThis && flipped ? "is-flipped" : ""
-              }`}
+              className={`flip ${data.cards.length > 3 ? "small" : ""} ${isThis && flipped ? "is-flipped" : ""
+                }`}
               style={{ opacity: dimmed ? 0.35 : 1, pointerEvents: picked !== null ? "none" : "auto" }}
               disabled={picked !== null}
               onClick={() => pick(i)}
@@ -992,15 +991,15 @@ function ReplyReady({ data, response, proposed, activity }) {
     response === "confirm"
       ? "You're in! 🎉"
       : response === "propose"
-      ? "Nice — suggest that time 🕘"
-      : "Sent back to reshuffle ↩";
+        ? "Nice — suggest that time 🕘"
+        : "Sent back to reshuffle ↩";
 
   const sub =
     response === "confirm"
       ? `Send this back so ${data.from || "they"} know${data.from ? "s" : ""} it's on.`
       : response === "propose"
-      ? `Send this back with your suggested time.`
-      : `No worries. Send it back and let ${data.from || "them"} take another turn.`;
+        ? `Send this back with your suggested time.`
+        : `No worries. Send it back and let ${data.from || "them"} take another turn.`;
 
   if (!url) {
     return (
@@ -1276,10 +1275,10 @@ function Waiting({ room }) {
       <p className="sub" style={{ fontSize: 13, opacity: 0.8 }}>
         {checkedAt
           ? `Last checked ${checkedAt.toLocaleTimeString(undefined, {
-              hour: "numeric",
-              minute: "2-digit",
-              second: "2-digit",
-            })}`
+            hour: "numeric",
+            minute: "2-digit",
+            second: "2-digit",
+          })}`
           : "Checking…"}
       </p>
       <SentRecap deck={record?.deck} to={who} />
